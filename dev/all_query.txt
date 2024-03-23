@@ -1,0 +1,38 @@
+
+------------------------- CREATE TABLE
+CREATE TABLE account (
+  email varchar(100) not null PRIMARY KEY,
+  name varchar(100) not null,
+  password varchar(100) not null,
+  aboutme varchar(1000) not null,
+  address varchar(100) not null,
+  linkedin varchar(100) not null,
+  verified int(1) not null DEFAULT 0
+);
+
+------------------------- INSERT DUMMY DATA
+INSERT INTO account (email, name, password, aboutme, address, linkedin, verified)
+VALUES ('johndoe@example.com', 'John Doe', 'password123', 'I am a software developer.', '123 Main St.', 'johndoe', 0);
+
+INSERT INTO account (email, name, password, aboutme, address, linkedin, verified)
+VALUES ('janesmith@example.com', 'Jane Smith', 'secretpassword', 'I love cats!', '456 Elm St.', 'janesmith123', 0);
+
+------------------------- UPDATE VERIFIED INFORMATION
+UPDATE account
+SET verified = 1
+WHERE email = "janesmith@example.com";
+
+------------------------- CHECK USER VERIFIED OR NOT
+SELECT *
+FROM account
+WHERE email = 'janesmith@example.com' AND verified = 1;
+
+------------------------- LOGIN
+SELECT *
+FROM account
+WHERE email = 'janesmith@example.com';
+
+------------------------ LIST ALL VACANCY
+SELECT *
+FROM vacancy;
+
