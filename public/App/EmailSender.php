@@ -1,13 +1,15 @@
 <?php
 
+namespace App;
+
 use PHPMailer\PHPMailer\PHPMailer;
 
 class EmailSender
 {
-    private $mail;
-    private $email;
+    public $mail;
+    private $email = "erwinwingyonata@gmail.com";
 
-    public function __construct($input_email)
+    public function __construct()
     {
         // define the private variable
         $this->mail = new PHPMailer(true);
@@ -26,12 +28,10 @@ class EmailSender
         );
 
         // Your Gmail credentials
-        $this->mail->Username = 'erwinwingyonata@gmail.com';
+        $this->mail->Username = $this->email;
         $this->mail->Password = 'qleltgvmdoaweefv';
 
         // Sender and recipient settings
-        $this->mail->setFrom('erwinwingyonata@gmail.com', 'Erwin Yonata');
-
-        $this->email = $input_email;
+        $this->mail->setFrom($this->email, 'Erwin Yonata');
     }
 }
