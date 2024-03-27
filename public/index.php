@@ -7,6 +7,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/util.php';      # Utility functions
 
 /**
  * Instantiate App
@@ -83,45 +84,163 @@ $app->get('/api/fetch_all', function (Request $request, Response $response) {
     }
 });
 
+$app->get('/api/request_test', function (Request $request, Response $response) {
+
+//    $data = array(
+//        "to" => "erwin.yonata@my.sampoernauniversity.ac.id",
+//        "subject" => "Test subject",
+//        "message" => "Message to be tested!"
+//    );
+//    send_request("/api/email/send", json_encode($data));
+});
+
 
 /*
  * ADMINISTRATION API
  */
 
 $app->post('/api/login', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['email']           : User email
+     * input['password']        : User password
+     */
 
-});
+    $email = $input['email'];
+    $password = $input['password'];
+    $encrypted_password = encrypt_password($password);
 
-$app->post('/api/signup', function (Request $request, Response $response, $args) {
-
-});
-
-$app->post('/api/update/password', function (Request $request, Response $response, $args) {
-    $sql = "SELECT * FROM account";
-
+    $sqlAccount = "SELECT * FROM account WHERE email='$email';";
     try {
         $db = new Db();
-        $customers = $db->fetchAllRow($sql);
+        $isAccountExist = $db->isDataExists($sqlAccount);
+        if ($isAccountExist) {
+            $accountData = $db->fetchAllRow($sqlAccount);
+            $accountPassword = $accountData[0]->password;
+            if (password_verify($password, $accountPassword)) {
+                // Return JSON-encoded response body
+                $data = array(
+                    'status' => 'success',
+                    'message' => 'User is validated'
+                );
+            } else {
+                // Return JSON-encoded response body
+                $data = array(
+                    'status' => 'failed',
+                    'message' => 'User data is wrong'
+                );
+            }
 
-        $response->getBody()->write(json_encode($customers));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(200);
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'User not found'
+            );
+        }
+
+        $response->getBody()->write(json_encode($data));
+        return $response->withHeader('Content-Type', 'application/json');
+
     } catch (PDOException $e) {
         $error = array(
             "message" => $e->getMessage()
         );
-
         $response->getBody()->write(json_encode($error));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(500);
+        return $response->withHeader('content-type', 'application/json');
     }
 });
 
+$app->post('/api/signup', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['name']            : Name of the person
+     * input['email']           : User email
+     * input['password']        : User password
+     */
 
+    $name = $input['name'];
+    $email = $input['email'];
+    $password = $input['password'];
+    $encrypted_password = encrypt_password($password);
+    $query = "INSERT INTO account (email, name, password) VALUES ('$email', '$name', '$encrypted_password');";
 
+    try {
+        $db = new Db();
+        $isDataInsertedSuccessfully = $db->insertRow($query);
 
+        if ($isDataInsertedSuccessfully) {
+            // Sending verification email
+            // ........................................
+
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'success',
+                'message' => 'New user registered. Verification link has been sent to your email.'
+            );
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'New user failed to register'
+            );
+        }
+        $response->getBody()->write(json_encode($data));
+        return $response->withHeader('Content-Type', 'application/json');
+
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
+});
+
+$app->get('/api/update/password', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['email']           : User email
+     * input['password']        : User new password
+     */
+
+    $email = $input['email'];
+    $password = $input['password'];
+    $encrypted_password = encrypt_password($password);
+    $query = "UPDATE account SET password='$encrypted_password' WHERE email='$email';";
+
+    try {
+        $db = new Db();
+        $isPasswordUpdatedSuccessfully = $db->updateData($query);
+
+        if ($isPasswordUpdatedSuccessfully) {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'success',
+                'message' => 'Password has been updated'
+            );
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'Password failed to be updated'
+            );
+        }
+        $response->getBody()->write(json_encode($data));
+        return $response->withHeader('Content-Type', 'application/json');
+
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
+
+});
 
 /*
  * USER API
@@ -130,10 +249,6 @@ $app->post('/api/update/password', function (Request $request, Response $respons
 $app->post('/api/update/profile', function (Request $request, Response $response, $args) {
 
 });
-
-
-
-
 
 /*
  * JOB API
@@ -144,15 +259,11 @@ $app->post('/api/job/apply', function (Request $request, Response $response, $ar
 });
 
 $app->post('/api/job/remove', function (Request $request, Response $response, $args) {
-
-    //   TO BE CONTINUE........
-    // must delete all the record corresponding with the record
-
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
     /*
-    * input['vacancy_id']               : vacancy ID
-    */
+     * input['vancancy_id']         : Vacancy ID
+     */
 
     $vacancy_id = $input['vacancy_id'];
     $sqlApplyTable = "DELETE FROM apply WHERE vacancy='$vacancy_id';";
@@ -177,22 +288,16 @@ $app->post('/api/job/remove', function (Request $request, Response $response, $a
             );
         }
         $response->getBody()->write(json_encode($data));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return $response->withHeader('Content-Type', 'application/json');
+
     } catch (PDOException $e) {
         $error = array(
             "message" => $e->getMessage()
         );
-
         $response->getBody()->write(json_encode($error));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(400);
+        return $response->withHeader('content-type', 'application/json');
     }
 });
-
-
 
 /*
  * VACANCY API
@@ -200,38 +305,27 @@ $app->post('/api/job/remove', function (Request $request, Response $response, $a
 
 $app->get('/api/vacancy', function (Request $request, Response $response, $args) {
     $sql = "SELECT * FROM vacancy";
-
     try {
         $db = new Db();
         $vacancies = $db->fetchAllRow($sql);
         $response->getBody()->write(json_encode($vacancies));
 
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(200);
+        return $response->withHeader('content-type', 'application/json');
+
     } catch (PDOException $e) {
         $error = array(
             "message" => $e->getMessage()
         );
-
         $response->getBody()->write(json_encode($error));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(500);
+        return $response->withHeader('content-type', 'application/json');
     }
 });
-
-
-
-
 
 /*
  * UTILITIES API
  */
 
 $app->post('/api/email/send', function (Request $request, Response $response, $args) {
-    // Send email in general, it can verification email or forgot password email
-
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
     /*
@@ -241,7 +335,6 @@ $app->post('/api/email/send', function (Request $request, Response $response, $a
      */
 
     $email = new EmailSender();
-
     try {
         // email address - who to send
         $email->mail->addAddress($input['to']);
@@ -249,7 +342,6 @@ $app->post('/api/email/send', function (Request $request, Response $response, $a
         $email->mail->isHTML(true);
         $email->mail->Subject = $input['subject'];
         $email->mail->Body    = $input['message'];
-
         // Send the email
         $email->mail->send();
 
@@ -259,20 +351,14 @@ $app->post('/api/email/send', function (Request $request, Response $response, $a
             'message' => 'Email sent successfully'
         );
         $response->getBody()->write(json_encode($data));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return $response->withHeader('Content-Type', 'application/json');
+
     } catch (Exception $e) {
         $error = array(
             "message" => $e->getMessage()
         );
-
         $response->getBody()->write(json_encode($error));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(400);
+        return $response->withHeader('content-type', 'application/json');
     }
 });
-
-
 $app->run();

@@ -39,4 +39,43 @@ class DB
             return false;
         }
     }
+
+    public function insertRow($sql): bool
+    {
+        $conn = $this->connect();
+        $stmt = $conn->query($sql);
+
+        if ($stmt->rowCount() > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function isDataExists($sql): bool
+    {
+        $conn = $this->connect();
+        $stmt = $conn->query($sql);
+
+        if ($stmt->rowCount() > 0) {
+            return true; // Data exists
+        } else {
+            return false; // Data does not exist
+        }
+    }
+
+    public function updateData($sql): bool
+    {
+        $conn = $this->connect();
+        $stmt = $conn->query($sql);
+
+        if ($stmt->rowCount() > 0) {
+            return true; // Data updated
+        } else {
+            return false; // No data updated
+        }
+    }
+
+
+
 }
