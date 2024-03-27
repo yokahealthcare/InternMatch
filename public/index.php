@@ -65,9 +65,9 @@ $app->get('/api/fetch_all', function (Request $request, Response $response) {
 
     try {
         $db = new Db();
-        $customers = $db->fetchAll($sql);
-        $response->getBody()->write(json_encode($customers));
+        $customers = $db->fetchAllRow($sql);
 
+        $response->getBody()->write(json_encode($customers));
         return $response
             ->withHeader('content-type', 'application/json')
             ->withStatus(200);
@@ -97,7 +97,26 @@ $app->post('/api/signup', function (Request $request, Response $response, $args)
 });
 
 $app->post('/api/update/password', function (Request $request, Response $response, $args) {
-    // Forgot password update system
+    $sql = "SELECT * FROM account";
+
+    try {
+        $db = new Db();
+        $customers = $db->fetchAllRow($sql);
+
+        $response->getBody()->write(json_encode($customers));
+        return $response
+            ->withHeader('content-type', 'application/json')
+            ->withStatus(200);
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+
+        $response->getBody()->write(json_encode($error));
+        return $response
+            ->withHeader('content-type', 'application/json')
+            ->withStatus(500);
+    }
 });
 
 
@@ -126,6 +145,51 @@ $app->post('/api/job/apply', function (Request $request, Response $response, $ar
 
 $app->post('/api/job/remove', function (Request $request, Response $response, $args) {
 
+    //   TO BE CONTINUE........
+    // must delete all the record corresponding with the record
+
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+    * input['vacancy_id']               : vacancy ID
+    */
+
+    $vacancy_id = $input['vacancy_id'];
+    $sqlApplyTable = "DELETE FROM apply WHERE vacancy='$vacancy_id';";
+    $sqlVacancyTable = "DELETE FROM vacancy WHERE id='$vacancy_id';";
+
+    try {
+        $db = new Db();
+        $isApplyTableDeleted = $db->deleteRow($sqlApplyTable);
+        $isVancancyTableDeleted = $db->deleteRow($sqlVacancyTable);
+
+        if ($isApplyTableDeleted && $isVancancyTableDeleted) {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'success',
+                'message' => 'Job vacancy successfully deleted'
+            );
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'Job vacancy failed to be deleted'
+            );
+        }
+        $response->getBody()->write(json_encode($data));
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(200);
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+
+        $response->getBody()->write(json_encode($error));
+        return $response
+            ->withHeader('content-type', 'application/json')
+            ->withStatus(400);
+    }
 });
 
 
@@ -139,8 +203,8 @@ $app->get('/api/vacancy', function (Request $request, Response $response, $args)
 
     try {
         $db = new Db();
-        $customers = $db->fetchAll($sql);
-        $response->getBody()->write(json_encode($customers));
+        $vacancies = $db->fetchAllRow($sql);
+        $response->getBody()->write(json_encode($vacancies));
 
         return $response
             ->withHeader('content-type', 'application/json')
@@ -195,9 +259,18 @@ $app->post('/api/email/send', function (Request $request, Response $response, $a
             'message' => 'Email sent successfully'
         );
         $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(200);
     } catch (Exception $e) {
-        return $response->withStatus(400)->withHeader('X-Status-Reason', $e->getMessage());
+        $error = array(
+            "message" => $e->getMessage()
+        );
+
+        $response->getBody()->write(json_encode($error));
+        return $response
+            ->withHeader('content-type', 'application/json')
+            ->withStatus(400);
     }
 });
 

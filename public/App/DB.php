@@ -20,11 +20,23 @@ class DB
         return $conn;
     }
 
-    public function fetchAll($sql): bool|array
+    public function fetchAllRow($sql): bool|array
     {
         $conn = $this->connect();
         $stmt = $conn->query($sql);
 
         return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public function deleteRow($sql): bool
+    {
+        $conn = $this->connect();
+        $stmt = $conn->query($sql);
+
+        if ($stmt->rowCount() > 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

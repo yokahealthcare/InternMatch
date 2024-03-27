@@ -17,6 +17,15 @@ VALUES ('johndoe@example.com', 'John Doe', 'password123', 'I am a software devel
 INSERT INTO account (email, name, password, aboutme, address, linkedin, verified)
 VALUES ('janesmith@example.com', 'Jane Smith', 'secretpassword', 'I love cats!', '456 Elm St.', 'janesmith123', 0);
 
+
+
+INSERT INTO vacancy (id, title, description, status, account)
+VALUES ('84b1e4cf-c64c-4445-84b8-525a6ac90352', 'Job Title 2', 'Job Description 2', 'Open', 'johndoe@example.com');
+
+
+INSERT INTO apply (id, account, vacancy)
+VALUES ('6c407c0e-2336-483c-8fdd-dc1dea772c1a', 'janesmith@example.com', '84b1e4cf-c64c-4445-84b8-525a6ac90352');
+
 ------------------------- UPDATE VERIFIED INFORMATION
 UPDATE account
 SET verified = 1
