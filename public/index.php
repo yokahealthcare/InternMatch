@@ -61,29 +61,6 @@ $app->post('/api/post_test', function (Request $request, Response $response, $ar
     }
 });
 
-$app->get('/api/fetch_all', function (Request $request, Response $response) {
-    $sql = "SELECT * FROM account";
-
-    try {
-        $db = new Db();
-        $customers = $db->fetchAllRow($sql);
-
-        $response->getBody()->write(json_encode($customers));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(200);
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-
-        $response->getBody()->write(json_encode($error));
-        return $response
-            ->withHeader('content-type', 'application/json')
-            ->withStatus(500);
-    }
-});
-
 $app->get('/api/request_test', function (Request $request, Response $response) {
 
 //    $data = array(
@@ -92,12 +69,46 @@ $app->get('/api/request_test', function (Request $request, Response $response) {
 //        "message" => "Message to be tested!"
 //    );
 //    send_request("/api/email/send", json_encode($data));
+
+
 });
 
 
 /*
  * ADMINISTRATION API
  */
+$app->get('/api/profile', function (Request $request, Response $response) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['email']           : User email
+     */
+
+    $email = $input['email'];
+    $sql = "SELECT * FROM account WHERE email='$email';";
+
+    try {
+        $db = new Db();
+        $customers = $db->fetchAllRow($sql);
+
+        // Return JSON-encoded response body
+        $data = array(
+            'status' => 'success',
+            'message' => 'User data retrieved'
+        );
+
+        $response->getBody()->write(json_encode($customers));
+        return $response->withHeader('content-type', 'application/json');
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
+});
+
 
 $app->post('/api/login', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
@@ -199,7 +210,11 @@ $app->post('/api/signup', function (Request $request, Response $response, $args)
     }
 });
 
-$app->get('/api/update/password', function (Request $request, Response $response, $args) {
+/*
+ * UPDATE API
+ */
+
+$app->post('/api/update/password', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
     /*
@@ -242,23 +257,143 @@ $app->get('/api/update/password', function (Request $request, Response $response
 
 });
 
-/*
- * USER API
- */
-
 $app->post('/api/update/profile', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['name']            : Name of the person
+     * input['aboutme']         : Description about that person (length: 1000)
+     * input['cv']              : CV path
+     * input['address']         : Address of person
+     * input['linkedin']        : Linkedin url
+     */
+
+});
+
+$app->post('/api/update/vacancy', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['title']               : Title of vacancy
+     * input['description']         : Description of vacancy
+     * input['status']              : Status of vacancy
+     */
+
 
 });
 
 /*
- * JOB API
+ * VACANCY API
  */
 
-$app->post('/api/job/apply', function (Request $request, Response $response, $args) {
+$app->get('/api/vacancy', function (Request $request, Response $response, $args) {
+    $sql = "SELECT * FROM vacancy";
+    try {
+        $db = new Db();
+        $vacancies = $db->fetchAllRow($sql);
+        $response->getBody()->write(json_encode($vacancies));
+
+        return $response->withHeader('content-type', 'application/json');
+
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
+});
+
+$app->post('/api/vacancy/apply', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['account']         : Account person who apply
+     * input['vacancy']         : Vacancy ID that the person applied
+     */
+
+    $id = uniqid();
+    $account = $input['account'];
+    $vacancy = $input['vacancy'];
+    $query = "INSERT INTO apply (id, account, vacancy) VALUES ('$id', '$account', '$vacancy');";
+
+    try {
+        $db = new Db();
+        $isDataInsertedSuccessfully = $db->insertRow($query);
+
+        if ($isDataInsertedSuccessfully) {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'success',
+                'message' => 'Successfully applied to job!'
+            );
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'Failed to applied to job'
+            );
+        }
+        $response->getBody()->write(json_encode($data));
+        return $response->withHeader('Content-Type', 'application/json');
+
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
 
 });
 
-$app->post('/api/job/remove', function (Request $request, Response $response, $args) {
+$app->post('/api/vacancy/create', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['title']           : Title of the vacancy
+     * input['description']      : Description of the vacancy
+     * input['status']          : Status of the vacancy
+     */
+
+    $id = uniqid();
+    $title = $input['title'];
+    $description = $input['description'];
+    $status = $input['status'];
+    $account = $input['account'];
+
+
+    $query = "INSERT INTO vacancy (id, title, description, status, account) VALUES ('$id', '$title', '$description', '$status', '$account');";
+    try {
+        $db = new Db();
+        $isVacancyDataInserted = $db->insertRow($query);
+
+        if ($isVacancyDataInserted) {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'success',
+                'message' => 'Job vacancy successfully created'
+            );
+        } else {
+            // Return JSON-encoded response body
+            $data = array(
+                'status' => 'failed',
+                'message' => 'Job vacancy failed to be created.'
+            );
+        }
+        $response->getBody()->write(json_encode($data));
+        return $response->withHeader('Content-Type', 'application/json');
+
+    } catch (PDOException $e) {
+        $error = array(
+            "message" => $e->getMessage()
+        );
+        $response->getBody()->write(json_encode($error));
+        return $response->withHeader('content-type', 'application/json');
+    }
+});
+
+$app->post('/api/vacancy/remove', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
     /*
@@ -299,27 +434,6 @@ $app->post('/api/job/remove', function (Request $request, Response $response, $a
     }
 });
 
-/*
- * VACANCY API
- */
-
-$app->get('/api/vacancy', function (Request $request, Response $response, $args) {
-    $sql = "SELECT * FROM vacancy";
-    try {
-        $db = new Db();
-        $vacancies = $db->fetchAllRow($sql);
-        $response->getBody()->write(json_encode($vacancies));
-
-        return $response->withHeader('content-type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
-    }
-});
 
 /*
  * UTILITIES API
