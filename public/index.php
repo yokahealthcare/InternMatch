@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 use App\DB;
 use App\EmailSender;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -7,7 +9,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/util.php';      # Utility functions
+require __DIR__ . '/util.php';
 
 /**
  * Instantiate App
@@ -37,48 +39,20 @@ $app->addRoutingMiddleware();
  */
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 
+// Initiate DB Instance
+$db = new DB();
+
 $app->get('/api', function (Request $request, Response $response, $args) {
-    $response->getBody()->write("Testing page, if you can see this page then API is callable!");
+    $response->getBody()->write("Testing page, if you can see this page then it working!");
     return $response;
 });
 
-
-$app->post('/api/post_test', function (Request $request, Response $response, $args) {
-    try {
-        // Get request converted to associative array
-        $input = json_decode($request->getBody(), True);
-
-        // Some logic here...
-        $data = array('name' => 'Bob', 'age' => 40);
-        $payload = json_encode($data);
-
-        // Return JSON-encoded response body
-        $response->getBody()->write($payload);
-        return $response
-            ->withHeader('Content-Type', 'application/json');
-    } catch (Exception $e) {
-        return $response->withStatus(400)->withHeader('X-Status-Reason', $e->getMessage());
-    }
-});
-
-$app->get('/api/request_test', function (Request $request, Response $response) {
-
-//    $data = array(
-//        "to" => "erwin.yonata@my.sampoernauniversity.ac.id",
-//        "subject" => "Test subject",
-//        "message" => "Message to be tested!"
-//    );
-//    send_request("/api/email/send", json_encode($data));
-
-
-});
-
-
 /*
- * ADMINISTRATION API
+ * FETCHING API
  */
-$app->get('/api/profile', function (Request $request, Response $response) {
-    // Get request converted to associative array
+
+$app->get('/api/fetch/profile', function (Request $request, Response $response) {
+    global $db;
     $input = json_decode($request->getBody(), True);
     /*
      * input['email']           : User email
@@ -86,205 +60,18 @@ $app->get('/api/profile', function (Request $request, Response $response) {
 
     $email = $input['email'];
     $sql = "SELECT * FROM account WHERE email='$email';";
-
     try {
-        $db = new Db();
         $customers = $db->fetchAllRow($sql);
 
-        // Return JSON-encoded response body
-        $data = array(
-            'status' => 'success',
-            'message' => 'User data retrieved'
-        );
-
         $response->getBody()->write(json_encode($customers));
-        return $response->withHeader('content-type', 'application/json');
+        return $response->withHeader('content-type', 'application/json')->withStatus(200);
     } catch (PDOException $e) {
-        $error = array(
+        $response->getBody()->write(json_encode(array(
             "message" => $e->getMessage()
-        );
-
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
+        )));
+        return $response->withHeader('content-type', 'application/json')->withStatus(500);
     }
 });
-
-
-$app->post('/api/login', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
-    /*
-     * input['email']           : User email
-     * input['password']        : User password
-     */
-
-    $email = $input['email'];
-    $password = $input['password'];
-    $encrypted_password = encrypt_password($password);
-
-    $sqlAccount = "SELECT * FROM account WHERE email='$email';";
-    try {
-        $db = new Db();
-        $isAccountExist = $db->isDataExists($sqlAccount);
-        if ($isAccountExist) {
-            $accountData = $db->fetchAllRow($sqlAccount);
-            $accountPassword = $accountData[0]->password;
-            if (password_verify($password, $accountPassword)) {
-                // Return JSON-encoded response body
-                $data = array(
-                    'status' => 'success',
-                    'message' => 'User is validated'
-                );
-            } else {
-                // Return JSON-encoded response body
-                $data = array(
-                    'status' => 'failed',
-                    'message' => 'User data is wrong'
-                );
-            }
-
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'User not found'
-            );
-        }
-
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
-    }
-});
-
-$app->post('/api/signup', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
-    /*
-     * input['name']            : Name of the person
-     * input['email']           : User email
-     * input['password']        : User password
-     */
-
-    $name = $input['name'];
-    $email = $input['email'];
-    $password = $input['password'];
-    $encrypted_password = encrypt_password($password);
-    $query = "INSERT INTO account (email, name, password) VALUES ('$email', '$name', '$encrypted_password');";
-
-    try {
-        $db = new Db();
-        $isDataInsertedSuccessfully = $db->insertRow($query);
-
-        if ($isDataInsertedSuccessfully) {
-            // Sending verification email
-            // ........................................
-
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'success',
-                'message' => 'New user registered. Verification link has been sent to your email.'
-            );
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'New user failed to register'
-            );
-        }
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
-    }
-});
-
-/*
- * UPDATE API
- */
-
-$app->post('/api/update/password', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
-    /*
-     * input['email']           : User email
-     * input['password']        : User new password
-     */
-
-    $email = $input['email'];
-    $password = $input['password'];
-    $encrypted_password = encrypt_password($password);
-    $query = "UPDATE account SET password='$encrypted_password' WHERE email='$email';";
-
-    try {
-        $db = new Db();
-        $isPasswordUpdatedSuccessfully = $db->updateData($query);
-
-        if ($isPasswordUpdatedSuccessfully) {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'success',
-                'message' => 'Password has been updated'
-            );
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'Password failed to be updated'
-            );
-        }
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
-    }
-
-});
-
-$app->post('/api/update/profile', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
-    /*
-     * input['name']            : Name of the person
-     * input['aboutme']         : Description about that person (length: 1000)
-     * input['cv']              : CV path
-     * input['address']         : Address of person
-     * input['linkedin']        : Linkedin url
-     */
-
-});
-
-$app->post('/api/update/vacancy', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
-    /*
-     * input['title']               : Title of vacancy
-     * input['description']         : Description of vacancy
-     * input['status']              : Status of vacancy
-     */
-
-
-});
-
-/*
- * VACANCY API
- */
 
 $app->get('/api/vacancy', function (Request $request, Response $response, $args) {
     $sql = "SELECT * FROM vacancy";
@@ -304,6 +91,123 @@ $app->get('/api/vacancy', function (Request $request, Response $response, $args)
     }
 });
 
+/*
+ * INDIRECTION API
+ */
+
+$app->post('/api/login', function (Request $request, Response $response, $args) {
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['email']           : User email
+     * input['password']        : User password
+     */
+
+    $status = validateLogin($input['email'], $input['password']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+
+    return $response;
+});
+
+
+$app->post('/api/signup', function (Request $request, Response $response, $args) {
+    global $db;
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['name']            : Name of the person
+     * input['email']           : User email
+     * input['password']        : User password
+     */
+
+    $status = validateSignup($input['name'], $input['email'], $input['password']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+    return $response;
+});
+
+$app->get('/api/account/verified', function (Request $request, Response $response, $args) {
+    // TOBE CONTINUED .....
+
+
+
+
+    $input = json_decode($request->getBody(), True);
+    print_r($request->getBody());
+    /*
+     * input['email']            : Email of the account
+     */
+    $status = validateVerifyAccount($input['email']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+    return $response;
+});
+
+$app->post('/api/account/update', function (Request $request, Response $response, $args) {
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['name']            : Name of the person
+     * input['aboutme']         : Description about that person (length: 1000)
+     * input['cv']              : CV path
+     * input['address']         : Address of person
+     * input['linkedin']        : Linkedin url
+     */
+});
+
+$app->post('/api/password/update', function (Request $request, Response $response, $args) {
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['email']           : User email
+     * input['password']        : User new password
+     */
+
+    $status = validateUpdatePassword($input['email'], $input['password']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+    return $response;
+});
+
+$app->post('/api/vacancy/update', function (Request $request, Response $response, $args) {
+    // Get request converted to associative array
+    $input = json_decode($request->getBody(), True);
+    /*
+     * input['id']                  : Vacancy ID
+     * input['title']               : Title of vacancy
+     * input['description']         : Description of vacancy
+     * input['status']              : Status of vacancy
+     */
+
+    $status = validateUpdateVacancy($input['id'], $input['title'], $input['description'], $input['status']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+    return $response;
+});
+
+
 $app->post('/api/vacancy/apply', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
@@ -312,38 +216,16 @@ $app->post('/api/vacancy/apply', function (Request $request, Response $response,
      * input['vacancy']         : Vacancy ID that the person applied
      */
 
-    $id = uniqid();
-    $account = $input['account'];
-    $vacancy = $input['vacancy'];
-    $query = "INSERT INTO apply (id, account, vacancy) VALUES ('$id', '$account', '$vacancy');";
-
-    try {
-        $db = new Db();
-        $isDataInsertedSuccessfully = $db->insertRow($query);
-
-        if ($isDataInsertedSuccessfully) {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'success',
-                'message' => 'Successfully applied to job!'
-            );
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'Failed to applied to job'
-            );
-        }
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
+    $id = uniqid(); // Create new apply ID
+    $status = validateApplyVacancy($id, $input['account'], $input['vacancy']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
     }
+    return $response;
 
 });
 
@@ -352,92 +234,52 @@ $app->post('/api/vacancy/create', function (Request $request, Response $response
     $input = json_decode($request->getBody(), True);
     /*
      * input['title']           : Title of the vacancy
-     * input['description']      : Description of the vacancy
+     * input['description']     : Description of the vacancy
      * input['status']          : Status of the vacancy
+     * input['account']         : Account ID creator
      */
 
-    $id = uniqid();
-    $title = $input['title'];
-    $description = $input['description'];
-    $status = $input['status'];
-    $account = $input['account'];
-
-
-    $query = "INSERT INTO vacancy (id, title, description, status, account) VALUES ('$id', '$title', '$description', '$status', '$account');";
-    try {
-        $db = new Db();
-        $isVacancyDataInserted = $db->insertRow($query);
-
-        if ($isVacancyDataInserted) {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'success',
-                'message' => 'Job vacancy successfully created'
-            );
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'Job vacancy failed to be created.'
-            );
-        }
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
+    $id = uniqid(); // Create new apply ID
+    $status = validateCreateVacancy($id, $input['title'], $input['description'], $input['status'], $input['account']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
     }
+    return $response;
+
 });
 
 $app->post('/api/vacancy/remove', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
     $input = json_decode($request->getBody(), True);
     /*
-     * input['vancancy_id']         : Vacancy ID
+     * input['id']         : Vacancy ID
      */
 
-    $vacancy_id = $input['vacancy_id'];
-    $sqlApplyTable = "DELETE FROM apply WHERE vacancy='$vacancy_id';";
-    $sqlVacancyTable = "DELETE FROM vacancy WHERE id='$vacancy_id';";
-
-    try {
-        $db = new Db();
-        $isApplyTableDeleted = $db->deleteRow($sqlApplyTable);
-        $isVancancyTableDeleted = $db->deleteRow($sqlVacancyTable);
-
-        if ($isApplyTableDeleted && $isVancancyTableDeleted) {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'success',
-                'message' => 'Job vacancy successfully deleted'
-            );
-        } else {
-            // Return JSON-encoded response body
-            $data = array(
-                'status' => 'failed',
-                'message' => 'Job vacancy failed to be deleted'
-            );
-        }
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
+    $status = validateRemoveVacancy($input["id"]);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
     }
+    return $response;
 });
 
 
-/*
- * UTILITIES API
- */
+
+
+
+
+
+
+
+
+
 
 $app->post('/api/email/send', function (Request $request, Response $response, $args) {
     // Get request converted to associative array
