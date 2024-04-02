@@ -33,7 +33,7 @@ class DB
         $conn = $this->connect();
         $stmt = $conn->query($sql);
 
-        if ($stmt->rowCount() > 0) {
+        if ($stmt->rowCount() >= 0) {
             return true;
         } else {
             return false;

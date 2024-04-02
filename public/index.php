@@ -3,7 +3,7 @@
 session_start();
 
 use App\DB;
-use App\EmailSender;
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
@@ -51,52 +51,49 @@ $app->get('/api', function (Request $request, Response $response, $args) {
  * FETCHING API
  */
 
-$app->get('/api/fetch/profile', function (Request $request, Response $response) {
-    global $db;
-    $input = json_decode($request->getBody(), True);
+$app->get('/api/profile/fetch', function (Request $request, Response $response) {
+    $input = $request->getQueryParams();
     /*
      * input['email']           : User email
      */
-
-    $email = $input['email'];
-    $sql = "SELECT * FROM account WHERE email='$email';";
-    try {
-        $customers = $db->fetchAllRow($sql);
-
-        $response->getBody()->write(json_encode($customers));
-        return $response->withHeader('content-type', 'application/json')->withStatus(200);
-    } catch (PDOException $e) {
-        $response->getBody()->write(json_encode(array(
-            "message" => $e->getMessage()
-        )));
-        return $response->withHeader('content-type', 'application/json')->withStatus(500);
-    }
+    $customers = fetchProfile($input['email']);
+    $response->getBody()->write($customers);
+    return $response->withHeader('content-type', 'application/json')->withStatus(200);
 });
 
-$app->get('/api/vacancy', function (Request $request, Response $response, $args) {
-    $sql = "SELECT * FROM vacancy";
-    try {
-        $db = new Db();
-        $vacancies = $db->fetchAllRow($sql);
-        $response->getBody()->write(json_encode($vacancies));
+$app->get('/api/vacancy/fetch', function (Request $request, Response $response, $args) {
+    $input = $request->getQueryParams();
+    /*
+     * input['search']           : Search Vacancy by Query
+     */
+    if(isset($input['search']))
+        $vacancies = fetchVacancy($input['search']);
+    else
+        $vacancies = fetchVacancy();
 
-        return $response->withHeader('content-type', 'application/json');
-
-    } catch (PDOException $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
-    }
+    $response->getBody()->write($vacancies);
+    return $response->withHeader('content-type', 'application/json')->withStatus(200);
 });
+
+$app->get('/api/apply/fetch', function (Request $request, Response $response, $args) {
+    $input = $request->getQueryParams();
+    /*
+     * input['email']           : User email
+     */
+    $applies = fetchApply($input['email']);
+    $response->getBody()->write($applies);
+    return $response->withHeader('content-type', 'application/json')->withStatus(200);
+});
+
+
+
 
 /*
- * INDIRECTION API
+ * VALIDATOR API
  */
 
 $app->post('/api/login', function (Request $request, Response $response, $args) {
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['email']           : User email
      * input['password']        : User password
@@ -116,8 +113,7 @@ $app->post('/api/login', function (Request $request, Response $response, $args) 
 
 
 $app->post('/api/signup', function (Request $request, Response $response, $args) {
-    global $db;
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['name']            : Name of the person
      * input['email']           : User email
@@ -136,16 +132,11 @@ $app->post('/api/signup', function (Request $request, Response $response, $args)
 });
 
 $app->get('/api/account/verified', function (Request $request, Response $response, $args) {
-    // TOBE CONTINUED .....
-
-
-
-
-    $input = json_decode($request->getBody(), True);
-    print_r($request->getBody());
+    $input = $request->getQueryParams();
     /*
      * input['email']            : Email of the account
      */
+
     $status = validateVerifyAccount($input['email']);
     if ($status == 200) {
         $response->getBody()->write("200");
@@ -154,22 +145,34 @@ $app->get('/api/account/verified', function (Request $request, Response $respons
     } elseif ($status == 500) {
         $response->getBody()->write("500");
     }
+
     return $response;
 });
 
 $app->post('/api/account/update', function (Request $request, Response $response, $args) {
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
+     * input['email']           : Email of the person
      * input['name']            : Name of the person
      * input['aboutme']         : Description about that person (length: 1000)
-     * input['cv']              : CV path
      * input['address']         : Address of person
      * input['linkedin']        : Linkedin url
      */
+
+    $status = validateUpdateAccount($input['email'], $input['name'], $input['aboutme'], $input['address'], $input['linkedin']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
+    }
+    return $response;
+
 });
 
 $app->post('/api/password/update', function (Request $request, Response $response, $args) {
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['email']           : User email
      * input['password']        : User new password
@@ -187,8 +190,7 @@ $app->post('/api/password/update', function (Request $request, Response $respons
 });
 
 $app->post('/api/vacancy/update', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['id']                  : Vacancy ID
      * input['title']               : Title of vacancy
@@ -209,8 +211,7 @@ $app->post('/api/vacancy/update', function (Request $request, Response $response
 
 
 $app->post('/api/vacancy/apply', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['account']         : Account person who apply
      * input['vacancy']         : Vacancy ID that the person applied
@@ -230,8 +231,7 @@ $app->post('/api/vacancy/apply', function (Request $request, Response $response,
 });
 
 $app->post('/api/vacancy/create', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['title']           : Title of the vacancy
      * input['description']     : Description of the vacancy
@@ -253,8 +253,7 @@ $app->post('/api/vacancy/create', function (Request $request, Response $response
 });
 
 $app->post('/api/vacancy/remove', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['id']         : Vacancy ID
      */
@@ -274,47 +273,23 @@ $app->post('/api/vacancy/remove', function (Request $request, Response $response
 
 
 
-
-
-
-
-
-
-
 $app->post('/api/email/send', function (Request $request, Response $response, $args) {
-    // Get request converted to associative array
-    $input = json_decode($request->getBody(), True);
+    $input = $request->getQueryParams();
     /*
      * input['to']          : recipient email address
      * input['subject']     : email subject
      * input['message']     : email message
      */
 
-    $email = new EmailSender();
-    try {
-        // email address - who to send
-        $email->mail->addAddress($input['to']);
-        // email content
-        $email->mail->isHTML(true);
-        $email->mail->Subject = $input['subject'];
-        $email->mail->Body    = $input['message'];
-        // Send the email
-        $email->mail->send();
-
-        // Return JSON-encoded response body
-        $data = array(
-            'status' => 'success',
-            'message' => 'Email sent successfully'
-        );
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-
-    } catch (Exception $e) {
-        $error = array(
-            "message" => $e->getMessage()
-        );
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('content-type', 'application/json');
+    $status = validateSendEmail($input['to'], $input['subject'], $input['message']);
+    if ($status == 200) {
+        $response->getBody()->write("200");
+    } elseif ($status == 400) {
+        $response->getBody()->write("400");
+    } elseif ($status == 500) {
+        $response->getBody()->write("500");
     }
+    return $response;
+
 });
 $app->run();

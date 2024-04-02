@@ -1,12 +1,49 @@
 <?php
 
 use App\DB;
+use App\EmailSender;
+
 $db = new DB();
 
 function encryptPassword($plain_password): string
 {
     return password_hash($plain_password, PASSWORD_DEFAULT);
 }
+
+/*
+ * FETCH
+ */
+
+function fetchProfile($email): bool|string
+{
+    global $db;
+    $sql = "SELECT * FROM account WHERE email='$email';";
+
+    $customers = $db->fetchAllRow($sql);
+    return json_encode($customers);
+}
+
+function fetchVacancy($search=''): bool|string
+{
+    global $db;
+    $sql = "SELECT * FROM vacancy WHERE title LIKE '%$search%';";
+
+    $vacancies = $db->fetchAllRow($sql);
+    return json_encode($vacancies);
+}
+
+function fetchApply($email): bool|string
+{
+    global $db;
+    $sql = "SELECT * FROM apply WHERE account='$email';";
+    $applies = $db->fetchAllRow($sql);
+    return json_encode($applies);
+}
+
+
+/*
+ * VALIDATOR
+ */
 
 
 function validateLogin($email, $password): int
@@ -45,7 +82,11 @@ function validateSignup($name, $email, $password): int
         $isDataInsertedSuccessfully = $db->insertRow($sql);
         if ($isDataInsertedSuccessfully) {
             // Sending verification email
-            // ........................................
+            $server = $_SERVER['SERVER_NAME'];
+            $port = $_SERVER['SERVER_PORT'];
+            $subject = "New Account Verification";
+            $message = "Thank you for joining with us. One more step, we need to verify your account by clicking this link, http://$server:$port/api/account/verified?email=$email";
+            validateSendEmail($email, $subject, $message);
 
             return 200;
         }
@@ -70,9 +111,20 @@ function validateVerifyAccount($email): int
     }
 }
 
-function validateUpdateAccount(): int
+function validateUpdateAccount($email, $name, $aboutme, $address, $linkedin): int
 {
-    return 0;
+    global $db;
+    $sql = "UPDATE account SET name='$name', aboutme='$aboutme', address='$address', linkedin='$linkedin' WHERE email='$email';";
+
+    try {
+        $isProfileUpdated = $db->updateData($sql);
+        if ($isProfileUpdated)
+            return 200;
+
+        return 400;
+    } catch (PDOException $e) {
+        return 500;
+    }
 }
 
 
@@ -161,6 +213,25 @@ function validateRemoveVacancy($id): int
 
         return 400;
     } catch (PDOException $e) {
+       return 500;
+    }
+}
+
+function validateSendEmail($to, $subject, $message): int
+{
+    $email = new EmailSender();
+    try {
+        // email address - who to send
+        $email->mail->addAddress($to);
+        // email content
+        $email->mail->isHTML(true);
+        $email->mail->Subject = $subject;
+        $email->mail->Body    = $message;
+        // Send the email
+        $email->mail->send();
+
+        return 200;
+    } catch (Exception $e) {
        return 500;
     }
 }
