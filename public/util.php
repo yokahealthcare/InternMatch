@@ -2,12 +2,37 @@
 
 use App\DB;
 use App\EmailSender;
+use JetBrains\PhpStorm\NoReturn;
 
 $db = new DB();
 
 function encryptPassword($plain_password): string
 {
     return password_hash($plain_password, PASSWORD_DEFAULT);
+}
+
+#[NoReturn] function send200($path, $message): void
+{
+    $params = "?code=200&message=$message";
+    redirectTo($path . $params);
+}
+
+#[NoReturn] function send400($path, $message): void
+{
+    $params = "?code=400&message=$message";
+    redirectTo($path . $params);
+}
+
+#[NoReturn] function send500($path, $message="server_error"): void
+{
+    $params = "?code=500&message=$message";
+    redirectTo($path . $params);
+}
+
+#[NoReturn] function redirectTo($path): void
+{
+    header("Location: $path");
+    exit();
 }
 
 /*
@@ -60,8 +85,13 @@ function validateLogin($email, $password): int
 
             $accountPassword = $accountData[0]->password;
             if (password_verify($password, $accountPassword)) {
-                // Session storing
-                // .....
+                $accountName = $accountData[0]->name;
+                $accountEmail = $accountData[0]->email;
+
+                // User session storing
+                $_SESSION['name'] = $accountName;
+                $_SESSION['email'] = $accountEmail;
+
                 return 200;
             }
         }
@@ -69,6 +99,13 @@ function validateLogin($email, $password): int
     } catch (PDOException $e) {
         return 500;
     }
+}
+
+function validateLogout(): int
+{
+    session_unset();
+    session_destroy();
+    return 200;
 }
 
 
@@ -81,12 +118,7 @@ function validateSignup($name, $email, $password): int
     try {
         $isDataInsertedSuccessfully = $db->insertRow($sql);
         if ($isDataInsertedSuccessfully) {
-            // Sending verification email
-            $server = $_SERVER['SERVER_NAME'];
-            $port = $_SERVER['SERVER_PORT'];
-            $subject = "New Account Verification";
-            $message = "Thank you for joining with us. One more step, we need to verify your account by clicking this link, http://$server:$port/api/account/verified?email=$email";
-            validateSendEmail($email, $subject, $message);
+            sendVerificationEmail($email);
 
             return 200;
         }
@@ -234,4 +266,14 @@ function validateSendEmail($to, $subject, $message): int
     } catch (Exception $e) {
        return 500;
     }
+}
+
+function sendVerificationEmail($email): void
+{
+    $server = $_SERVER['SERVER_NAME'];
+    $port = $_SERVER['SERVER_PORT'];
+    $subject = "New Account Verification";
+    $message = "Thank you for joining with us. One more step, we need to verify your account by clicking this link, http://$server:$port/api/account/verified?email=$email";
+
+    validateSendEmail($email, $subject, $message);
 }
