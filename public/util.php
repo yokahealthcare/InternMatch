@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 use App\DB;
 use App\EmailSender;
 use JetBrains\PhpStorm\NoReturn;
@@ -33,6 +35,27 @@ function encryptPassword($plain_password): string
 {
     header("Location: $path");
     exit();
+}
+
+/*
+ * SESSION MANAGEMENT
+ */
+function isLogged(): bool
+{
+    if (isset($_SESSION['email']) && isset($_SESSION['name']))
+        return true;
+    else
+        return false;
+}
+
+function getSessionName()
+{
+    return $_SESSION['name'];
+}
+
+function getSessionEmail()
+{
+    return $_SESSION['email'];
 }
 
 /*
@@ -274,6 +297,16 @@ function sendVerificationEmail($email): void
     $port = $_SERVER['SERVER_PORT'];
     $subject = "New Account Verification";
     $message = "Thank you for joining with us. One more step, we need to verify your account by clicking this link, http://$server:$port/api/account/verified?email=$email";
+
+    validateSendEmail($email, $subject, $message);
+}
+
+function sendResetPasswordEmail($email): void
+{
+    $server = $_SERVER['SERVER_NAME'];
+    $port = $_SERVER['SERVER_PORT'];
+    $subject = "Reset Password";
+    $message = "Sorry for your lost password. One more step, we need to reset your password account by clicking this link, http://$server:$port/reset_password.php?email=$email";
 
     validateSendEmail($email, $subject, $message);
 }

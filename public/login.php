@@ -26,7 +26,8 @@ if(isset($_SESSION['email']) && isset($_SESSION['name']))
     <button type="submit" name="submit">Login</button>
 </form>
 
-Don't have an account, <a href="signup.php">signup</a>
+Don't have an account, <a href="signup.php">signup</a><br>
+Forgot password? <a href="forgot_password.php">Here</a>
 
 </body>
 </html>

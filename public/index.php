@@ -1,7 +1,5 @@
 <?php
 
-session_start();
-
 use App\DB;
 
 use Psr\Http\Message\ResponseInterface as Response;
@@ -86,6 +84,20 @@ $app->get('/api/apply/fetch', function (Request $request, Response $response, $a
 });
 
 
+/*
+ * UTILITIES API
+ */
+
+$app->post('/api/email/send_reset_password', function (Request $request, Response $response, $args) {
+    $input = (array)$request->getParsedBody();
+    /*
+     * input['email']           : Recipient email
+     */
+
+    sendResetPasswordEmail($input['email']);
+    send200("../../login.php", "reset_password_email_sent_successfully");
+});
+
 
 
 /*
@@ -103,7 +115,7 @@ $app->post('/api/login', function (Request $request, Response $response, $args) 
     if ($status == 200) {
         send200("../dashboard.php", "login_success");
     } elseif ($status == 400) {
-        send400("../login.php", "invalid_credential");
+        send400("../login.php", "invalid_credential_or_account_has_not_been_verified");
     } elseif ($status == 500) {
         send500("../login.php");
     }

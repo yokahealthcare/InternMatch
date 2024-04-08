@@ -1,27 +1,15 @@
 <?php
 
-session_start();
-if(!(isset($_SESSION['email']) && isset($_SESSION['name'])))
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/util.php';
+
+if(!isLogged())
     header("Location: login.php");
 
-$url = 'http://localhost:8888/api/vacancy/fetch';
-// 1. initialize cURL
-$ch = curl_init();
-
-// 2. set the URL to access
-curl_setopt($ch, CURLOPT_URL, $url);
-
-// 3. set cURL to return as a string
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-// 4. execute cURL and store the result
-$output = curl_exec($ch);
-
-// 5. close cURL after use
-curl_close($ch);
-
-// 6. print the output
-print $output;
+$searchKeyword = "";
+if(isset($_GET['search']))
+    $searchKeyword = $_GET['search'];
+$vacancies = json_decode(fetchVacancy($searchKeyword), true)
 
 ?>
 
@@ -35,6 +23,33 @@ print $output;
     <title>Dashboard</title>
 </head>
 <body>
+
+<h1>Hi, <?php echo getSessionName(); ?></h1>
+
+<a href="/api/logout"><button>LOGOUT</button></a>
+<a href="create_vacancy.php"><button>Create Vacancy</button></a>
+<a href="profile.php"><button>Profile</button></a>
+
+<br><br>
+
+<?php
+    foreach ($vacancies as $vacancy) {
+        $id = $vacancy['id'];
+        $title = $vacancy['title'];
+        $description = $vacancy['description'];
+        $status = $vacancy['status'];
+        $account = $vacancy['account'];
+
+        echo "======================= <br>";
+        echo "ID : $id <br>";
+        echo "Title : $title <br>";
+        echo "Description : $description <br>";
+        echo "Status : $status <br>";
+        echo "Account : $account <br>";
+        echo "======================= <br>";
+    }
+
+?>
 
 
 </body>
