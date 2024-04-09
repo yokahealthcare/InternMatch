@@ -95,7 +95,7 @@ $app->post('/api/email/send_reset_password', function (Request $request, Respons
      */
 
     sendResetPasswordEmail($input['email']);
-    send200("../../login.php", "reset_password_email_sent_successfully");
+    send200("../../email_verification.php", "reset_password_email_sent_successfully");
 });
 
 
@@ -139,7 +139,7 @@ $app->post('/api/signup', function (Request $request, Response $response, $args)
 
     $status = validateSignup($input['name'], $input['email'], $input['password']);
     if ($status == 200) {
-        send200("../login.php", "signup_sucess");
+        send200("../login.php", "signup_sucess_verified_your_account_now");
     } elseif ($status == 400) {
         send400("../signup.php", "signup_failed");
     } elseif ($status == 500) {

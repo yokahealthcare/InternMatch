@@ -5,28 +5,35 @@ require __DIR__ . '/util.php';
 
 if(!isset($_GET['email']))
     send400("login.php", "url_is_broken");
-$email = $_GET['email']
+
+$email = $_GET['email'];
 ?>
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
-<form action="/api/password/update" method="post">
-    <input type="hidden" name="email" value="<?php echo $email;?>">
-
-    <label for="password">Password:</label><br>
-    <input type="password" name="password" id="password" required>
-
-    <button type="submit" name="submit">Reset Password</button>
-</form>
-
+    <div class="container">
+        <h2>Reset Password</h2>
+        <p>Enter your new password below:</p>
+        <form action="/api/password/update" method="POST">
+            <input type="hidden" name="email" value="<?php echo $email;?>">
+            <div class="form-group">
+                <label for="password">New Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <button type="submit">Reset Password</button>
+            </div>
+        </form>
+        <div class="form-group">
+            <p>Remembered your password? <a href="login.php">Log in</a></p>
+        </div>
+    </div>
 </body>
 </html>

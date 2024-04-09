@@ -1,33 +1,43 @@
 <?php
 
 session_start();
-if(isset($_SESSION['email']) && isset($_SESSION['name']))
+if(isset($_SESSION['email']) && isset($_SESSION['name'])) {
     header("Location: dashboard.php");
+    exit();
+}
 
 ?>
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
-<form action="/api/login" method="post">
-    <label for="email">Email: </label><br>
-    <input type="text" id="email" name="email" placeholder="enter your email" required><br>
-    <label for="password">Password: </label><br>
-    <input type="password" id="password" name="password" placeholder="enter your password" required><br><br>
-
-    <button type="submit" name="submit">Login</button>
-</form>
-
-Don't have an account, <a href="signup.php">signup</a><br>
-Forgot password? <a href="forgot_password.php">Here</a>
-
+    <div class="container">
+        <h2>Login</h2>
+        <form action="/api/login" method="POST">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <button type="submit">Login</button>
+            </div>
+            <div class="form-group">
+                <a href="forgot_password.php">Forgot Password?</a>
+            </div>
+            <div class="form-group">
+                <p>Don't have an account? <a href="signup.php">Sign Up</a></p>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
