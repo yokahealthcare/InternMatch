@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h2>Forgot Password</h2>
-        <p>Enter your email address below to receive instructions for resetting your password.</p>
+        <p>Enter the email address you used to create your account, and we'll send you a link to reset your password. If your email address is registered in our system you will receive the email..</p>
         <form action="/api/email/send_reset_password" method="POST">
             <div class="form-group">
                 <label for="email">Email:</label>

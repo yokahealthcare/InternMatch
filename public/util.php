@@ -301,6 +301,18 @@ function sendVerificationEmail($email): void
     validateSendEmail($email, $subject, $message);
 }
 
+
+function validateSendResetPasswordEmail($email): void
+{
+    global $db;
+
+    $sql="SELECT * FROM account WHERE email='$email';";
+    $isAccountExist = $db->isDataExists($sql);
+    if ($isAccountExist) {
+        sendResetPasswordEmail($email);
+    }
+}
+
 function sendResetPasswordEmail($email): void
 {
     $server = $_SERVER['SERVER_NAME'];
